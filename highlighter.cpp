@@ -4,6 +4,11 @@
 Highlighter::Highlighter(QTextDocument *parent)
     : QSyntaxHighlighter (parent)
 {
+    /*
+     * TODO: set precedence of highlighting
+     * For example comment should have the highest precedence
+     * because nothing can be highlighted in a comment
+    */
     HighlightingRule rule;
     // First set the weight & color for the keywords
     keywordFormat.setForeground(Qt::darkBlue);
@@ -66,11 +71,7 @@ Highlighter::Highlighter(QTextDocument *parent)
     rule.format = macroFormat;
     highlightingRules.append(rule);
 
-    // Single line comments: ; comment
-    singleLineCommentFormat.setForeground(Qt::gray);
-    rule.pattern = QRegularExpression(QStringLiteral(";.*"), QRegularExpression::CaseInsensitiveOption);
-    rule.format = singleLineCommentFormat;
-    highlightingRules.append(rule);
+
 
     // Double Quotations: "quotation"
     quotationFormat.setForeground(Qt::red);
@@ -117,6 +118,11 @@ Highlighter::Highlighter(QTextDocument *parent)
     rule.pattern = QRegularExpression(QStringLiteral("\\w+(?=\\s+equ)"), QRegularExpression::CaseInsensitiveOption);
     highlightingRules.append(rule);
 
+    // Single line comments: ; comment
+    singleLineCommentFormat.setForeground(Qt::gray);
+    rule.pattern = QRegularExpression(QStringLiteral(";.*"), QRegularExpression::CaseInsensitiveOption);
+    rule.format = singleLineCommentFormat;
+    highlightingRules.append(rule);
 }
 
 void Highlighter::highlightBlock(const QString &text){

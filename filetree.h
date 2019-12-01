@@ -1,11 +1,23 @@
 #ifndef FILETREE_H
 #define FILETREE_H
 
+#include <QSessionManager>
+#include <QtWidgets>
+#include <QFileSystemModel>
+#include <QTreeView>
+#include <QString>
 
-class filetree
+class FileTree : public QTreeView
 {
 public:
-    filetree();
+    FileTree();
+    void setCurDir(QString &dir);
+
+public slots:
+    void toggleFileTree();
+
+private:
+    QFileSystemModel model;
 };
 
 #endif // FILETREE_H

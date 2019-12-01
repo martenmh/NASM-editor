@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -30,14 +30,24 @@ SOURCES += \
     highlighter.cpp \
     texteditor.cpp \
     filedialog.cpp \
-    numberline.cpp
+    numberline.cpp \
+    terminal.cpp \
+    sidetab.cpp \
+    window.cpp \
+    filetree.cpp \
+    sidebarbutton.cpp
 
 HEADERS += \
         mainwindow.h \
     highlighter.h \
     texteditor.h \
     filedialog.h \
-    numberline.h
+    numberline.h \
+    terminal.h \
+    sidetab.h \
+    window.h \
+    filetree.h \
+    sidebarbutton.h
 
 FORMS += \
         mainwindow.ui

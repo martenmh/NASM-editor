@@ -6,8 +6,10 @@
 #include <QTextEdit>
 #include <QPlainTextEdit>
 #include <QTextEdit>
+#include <QTextBlock>
 
 
+class NumberLine;
 class TextEditor : public QPlainTextEdit
 {
 
@@ -17,6 +19,7 @@ public:
     void numberLinePaintEvent(QPaintEvent *event);
     int numberLineAreaWidth();
 
+    QTextBlock block;
 protected:
     void resizeEvent(QResizeEvent *event) override;
 
@@ -25,7 +28,7 @@ private slots:
     void highlightCurrentLine();
     void updateNumberLineArea(const QRect &, int);
 private:
-    QWidget *numberLine;
+    NumberLine *numberLine;
 };
 
 #endif // TEXTEDITOR_H

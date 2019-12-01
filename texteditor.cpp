@@ -2,8 +2,9 @@
 #include <numberline.h>
 TextEditor::TextEditor(QWidget *parent) : QPlainTextEdit (parent)
 {
-    numberLine = new NumberLine(this);
 
+    numberLine = new NumberLine(this);
+    this->setLineWrapMode(NoWrap);
     connect(this, &TextEditor::blockCountChanged, this, &TextEditor::updateNumberLineWidth);
     connect(this, &TextEditor::updateRequest, this, &TextEditor::updateNumberLineArea);
     connect(this, &TextEditor::cursorPositionChanged, this, &TextEditor::highlightCurrentLine);
@@ -20,7 +21,7 @@ int TextEditor::numberLineAreaWidth(){
         ++digits;
     }
 
-    int space = 3 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits;
+    int space = fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits;
 
     return space;
 }
@@ -65,27 +66,56 @@ void TextEditor::highlightCurrentLine(){
 
 #include <QPainter>
 #include <QTextBlock>
+#include <QDebug>
 void TextEditor::numberLinePaintEvent(QPaintEvent *event){
     QPainter painter(numberLine);
-    painter.fillRect(event->rect(), Qt::lightGray);
+    painter.fillRect(event->rect(), Qt::black);
 
-    QTextBlock block = firstVisibleBlock();
+    block = firstVisibleBlock();
     int blockNumber = block.blockNumber();
     int top = (int)blockBoundingGeometry(block).translated(contentOffset()).top();
     int bottom = top + (int)blockBoundingRect(block).height();
 
     while (block.isValid() && top <= event->rect().bottom()) {
         if (block.isVisible() && bottom >= event->rect().top()) {
-            QString number = QString::number(blockNumber + 1);
-            painter.setPen(Qt::black);
-            painter.drawText(0, top, numberLine->width(), fontMetrics().height(),
+            int iNum = blockNumber + 1;
+            QString number = QString::number(iNum);
+
+            // if found, draw breakpoint if necessary
+            /* Operator[]() silently inserts an item into the hash if it is not found */
+            if(numberLine->Lines->contains(iNum)){
+                /* If break point is enabled */
+                if(numberLine->Lines->find(iNum).value().breakPointEnabled){
+                    painter.setBrush(Qt::red);
+                    painter.drawEllipse(QRect(0, top, numberLine->width() ,numberLine->width()));
+                }
+
+            }
+            else{
+                numberLine->Lines->insert(iNum, {
+                    top, bottom, 0, numberLine->width(),
+                    false, false,
+                    0});
+            }
+
+            painter.setPen(Qt::white);
+            painter.drawText(0, top, numberLine->width() , fontMetrics().height(),
                              Qt::AlignRight, number);
         }
 
         block = block.next();
         top = bottom;
         bottom = top + (int) blockBoundingRect(block).height();
+
         ++blockNumber;
     }
+    numberLine->setTextSize(blockNumber, top);
 
 }
+
+
+
+
+
+
+

@@ -6,20 +6,74 @@
 #include <QMessageBox>
 #include <QDir>
 #include <QDebug>
+#include <QHBoxLayout>
+
+#include "sidetab.h"
+#include "filetree.h"
+
+
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
-    setupEditor();
-    setCentralWidget(editor);
+    /* Set up the window layout */
+    QHBoxLayout *layout = new QHBoxLayout;
+    layout->setContentsMargins(0,0,0,0);
+    layout->setSpacing(0);
 
-    createActions();
+    window = new Window(this);
+
+    /* Set up the central code editor */
+    setupEditor();
+
     createStatusBar();
+    createActions();
+
+    /* Set up the left side tab */
+    FileTree *tree = new FileTree();
+
+    left = new SideTab(this, tree);
+    QString *s = new QString("Hello");
+    left->addAction(0, *s);
+    layout->addWidget(left, 1);
+
+    QSplitter *splitter = new QSplitter(this);
+    splitter->setChildrenCollapsible(false);
+    splitter->setContentsMargins(0, 0, 0, 0);
+    splitter->addWidget(tree);
+    splitter->setHandleWidth(0);
+    /* Set up the central layout for the console & code editor */
+//    QWidget *widget = splitter->widget(index);
+//    QSizePolicy policy = widget->sizePolicy();
+//    policy.setHorizontalStretch(stretch);
+//    policy.setVerticalStretch(stretch);
+//    widget->setSizePolicy(policy);
+
+
+    QSplitter *vertical_splitter = new QSplitter(Qt::Vertical, this);
+    vertical_splitter->setChildrenCollapsible(false);
+    vertical_splitter->setContentsMargins(0, 0, 0, 0);
+    vertical_splitter->setHandleWidth(0);
+        /* Set the main code editor */
+    vertical_splitter->addWidget(editor);
+    vertical_splitter->addWidget(terminal);
+    splitter->addWidget(vertical_splitter);
+    layout->addWidget(splitter, 96);
+
+    /* Set up the right side tab */
+    SideTab *right = new SideTab(this);
+    layout->addWidget(right, 1);
+
+    window->setLayout(layout);
+    window->show();
+
+
+    setCentralWidget(window);
 
     readSettings();
-
 
     connect(editor->document(), &QTextDocument::contentsChanged, this, &MainWindow::documentWasModified);
 
@@ -27,8 +81,8 @@ MainWindow::MainWindow(QWidget *parent) :
     setCurrentFile(QString());
     setUnifiedTitleAndToolBarOnMac(true);
     setWindowTitle("NASM IDE [*]");
-
 }
+
 
 void MainWindow::setupEditor(){
     QFont font;
@@ -36,15 +90,24 @@ void MainWindow::setupEditor(){
     font.setFixedPitch(true);
     font.setPointSize(10);
 
+    terminal = new Terminal(this);
     editor = new TextEditor(this);
-    //editor->set
+
+    terminal->setFont(font);
     editor->setFont(font);
 
-    QPalette p = editor->palette();
-    p.setColor(QPalette::Base, Qt::black);
-    p.setColor(QPalette::Text, Qt::white);
-    editor->setPalette(p);
-    //editor->setTextColor(Qt::white);
+    // Set editor palette
+    QPalette ep = editor->palette();
+    ep.setColor(QPalette::Base, Qt::black);
+    ep.setColor(QPalette::Text, Qt::white);
+    editor->setPalette(ep);
+
+    // Set console palette
+    QPalette cp = editor->palette();
+    cp.setColor(QPalette::Base, Qt::black);
+    cp.setColor(QPalette::Text, Qt::white);
+    editor->setPalette(cp);
+
 
 
     highlighter = new Highlighter(editor->document());
@@ -83,15 +146,18 @@ void MainWindow::open(){
           // Try to select multiple files and directories at the same time in QFileDialog
           QListView *l = fileDialog->findChild<QListView*>("listView");
           if (l) {
-            l->setSelectionMode(QAbstractItemView::MultiSelection);
+            //l->setSelectionMode(QAbstractItemView::MultiSelection);
            }
           QTreeView *t = fileDialog->findChild<QTreeView*>();
            if (t) {
-             t->setSelectionMode(QAbstractItemView::MultiSelection);
+             //t->setSelectionMode(QAbstractItemView::MultiSelection);
             }
 
           int nMode = fileDialog->exec();
+
           QStringList files = fileDialog->selectedFiles();
+            auto dirs = fileDialog->selectedUrls().at(0).url();
+          this->left->tree()->setCurDir(dirs);
 //        f.open();
 //        f.show();
 //        f.
@@ -144,7 +210,6 @@ void MainWindow::createActions(){
     connect(newAct, &QAction::triggered, this, &MainWindow::newFile);   // Connect slots to actions
     fileMenu->addAction(newAct);
 
-
     /* Then the open action.. */
     QAction *openAct = new QAction(tr("&Open..."), this);
     openAct->setShortcuts(QKeySequence::Open);
@@ -194,7 +259,9 @@ void MainWindow::createActions(){
 }
 
 void MainWindow::createStatusBar(){
-    //statusBar()->showMessage(tr("Ready"));
+
+
+    statusBar()->showMessage(tr("Ready"));
 }
 
 void MainWindow::readSettings(){
@@ -216,24 +283,31 @@ void MainWindow::writeSettings(){
 }
 
 bool MainWindow::maybeSave(){
-    if(!editor->document()->isModified())
+    /* Simple switch statement to turn of maybeSave functionality when developing */
+    switch(developMode){
+    case devMode::NoDebug:
+    {
+        if(!editor->document()->isModified())
+            return true;
+
+        const QMessageBox::StandardButton ret
+                = QMessageBox::warning(this, tr("Application"), tr("The document has been modified.\n"
+                                                                    "Do you want to save your changes?"),
+                                        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+
+        switch(ret){
+        case QMessageBox::Save:
+            return save();
+        case QMessageBox::Cancel:
+            return false;
+        default:
+            break;
+        }
         return true;
-
-    const QMessageBox::StandardButton ret
-            = QMessageBox::warning(this, tr("Application"), tr("The document has been modified.\n"
-                                                                "Do you want to save your changes?"),
-                                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-
-    switch(ret){
-    case QMessageBox::Save:
-        return save();
-    case QMessageBox::Cancel:
-        return false;
-    default:
-        break;
     }
-
-    return true;
+    case devMode::Debug:
+        return true;
+    }
 }
 
 void MainWindow::loadFile(const QString &fileName){

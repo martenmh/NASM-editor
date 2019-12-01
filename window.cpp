@@ -1,6 +1,6 @@
 #include "window.h"
 
-window::window()
+Window::Window(QWidget *parent): QWidget (parent)
 {
 
 }

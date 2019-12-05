@@ -26,6 +26,12 @@ protected:
     /* Intercept user input for running commands & ignoring changed text */
     void keyPressEvent(QKeyEvent *e) override;
 private:
+    enum Shell{
+        zsh,
+        bash
+    };
+    Shell currentShell;
+
     // Functions for clearing and adding the userinput
     void clearUserInput();
     void addUserInput(QString s);
@@ -44,7 +50,7 @@ private:
     int minSize;
     QProcess *process;
     QString userInput;
-    QString bashText;
+    QString shellText;
 
 
     QString fullWorkingDir;

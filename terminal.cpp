@@ -15,10 +15,22 @@ Terminal::Terminal(QWidget *parent) : QPlainTextEdit (parent)
     QLineEdit *lineEdit = new QLineEdit();
     this->setMinimumSize(QSize(300,500));
     process = new QProcess(this);
-    QString sh = qgetenv("SHELL");
+    QString shell = qgetenv("SHELL");
 
-    process->setProgram("/bin/bash");
+
+
+    if(shell.contains("zsh")){
+        currentShell = Shell::zsh;
+    } else if(shell.contains("bash")){
+        currentShell = Shell::bash;
+    } else{
+        qDebug() << "No default shell detected, defaulting to bash";
+        currentShell = Shell::bash;
+    }
+
+    process->setProgram(shell);
     process->start();
+
 
     // Set all necessary variables
     checkVariables();
@@ -32,7 +44,7 @@ Terminal::Terminal(QWidget *parent) : QPlainTextEdit (parent)
     unchangedText = "@" + hostName + ":";
 
     // Write to terminal
-    this->insertPlainText(bashText);
+    this->insertPlainText(shellText);
 
     minSize = this->textCursor().position();
 }
@@ -46,28 +58,17 @@ void Terminal::checkVariables(){
      * whoami@hostname:~/Downloads$
     */
 
-    // Get user name
-    process->write("whoami\n");
+    switch (currentShell) {
+    case Shell::zsh:
+        process->write("echo \"${(%%)PS1}\"");
+        break;
+    case Shell::bash:
+        process->write("echo \"${PS1@P}\"");
+        break;
+    }
+
     process->waitForReadyRead();
-    userName = process->readAllStandardOutput();
-    userName.chop(1);
-
-    // Get full path of working directory
-    process->write("pwd\n");
-    process->waitForReadyRead();
-    fullWorkingDir = process->readAllStandardOutput();
-    fullWorkingDir.chop(1);
-    // Get home path
-    char* homeDir = getenv("HOME");
-
-    bashPath = fullWorkingDir;
-
-    // change '/home/$(username)' to '~/'
-    if(fullWorkingDir.contains(homeDir))
-        bashPath = "~" + bashPath.remove(0, 6 + userName.length());
-
-    //bashText = "<p style=\"color:green\">" + userName + "@" + hostName + "</p>:<p style=\"color:blue\">" + bashPath + "</p>$ ";
-    bashText =  userName + unchangedText + bashPath + "$ ";
+    shellText = process->readAllStandardOutput();
 
 }
 
@@ -111,10 +112,10 @@ void Terminal::run(){
     //this->append(process->readAllStandardError());
 
     userInput.clear();
-    // update minSize & set bashText again
-
+    
+    // update minSize & set shellText again
     checkVariables();
-    this->appendPlainText(bashText);
+    this->appendPlainText(shellText);
     this->update();
     minSize = this->textCursor().position();
 }
@@ -204,7 +205,7 @@ void Terminal::addUserInput(QString s){
 void Terminal::replaceUserInput(QString s){
     clearUserInput();
 
-    this->insertPlainText(bashText + s);
+    this->insertPlainText(shellText + s);
     this->textCursor().setPosition(1000);
     userInput = s;
 }
